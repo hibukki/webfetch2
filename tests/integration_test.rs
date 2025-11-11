@@ -24,14 +24,12 @@ async fn test_fetch_grugbrain() {
         .await
         .expect("Failed to create .tempwebfetch directory");
 
-    // Generate filename (using similar logic to the server)
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    // Generate filename using the actual function from the library
+    use url::Url;
+    use webfetch2::WebFetch;
 
-    let mut hasher = DefaultHasher::new();
-    url.hash(&mut hasher);
-    let hash = hasher.finish();
-    let filename = format!("{:x}.html", hash);
+    let parsed_url = Url::parse(url).expect("Failed to parse URL");
+    let filename = WebFetch::generate_filename(&parsed_url);
 
     let file_path = Path::new(".tempwebfetch").join(&filename);
 

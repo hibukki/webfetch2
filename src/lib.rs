@@ -114,12 +114,15 @@ impl WebFetch {
     }
 
     pub fn generate_filename(url: &url::Url) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
+        use sha2::{Sha256, Digest};
 
-        let mut hasher = DefaultHasher::new();
-        url.as_str().hash(&mut hasher);
-        let hash = hasher.finish();
+        // Use SHA-256 for stable, deterministic hashing
+        let mut hasher = Sha256::new();
+        hasher.update(url.as_str().as_bytes());
+        let result = hasher.finalize();
+
+        // Use first 16 bytes (128 bits) for reasonable filename length
+        let hash = u128::from_be_bytes(result[..16].try_into().unwrap());
 
         // Try to get file extension from URL path
         let extension = url
