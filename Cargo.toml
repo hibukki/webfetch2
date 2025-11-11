@@ -3,6 +3,10 @@ name = "webfetch2"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "webfetch2"
+path = "src/lib.rs"
+
 [dependencies]
 anyhow = "1.0.100"
 reqwest = "0.12.24"
