@@ -38,12 +38,12 @@ async fn test_fetch_grugbrain() {
     // Verify file exists
     assert!(file_path.exists(), "Downloaded file should exist");
 
-    // Get absolute path
-    let absolute_path = std::fs::canonicalize(&file_path)
-        .expect("Failed to get absolute path");
+    // Verify the file is in the correct location
+    assert!(file_path.starts_with(".tempwebfetch"), "Path should start with .tempwebfetch");
+    assert_eq!(file_path.file_name().unwrap().to_str().unwrap(), filename, "Path should end with correct filename");
 
-    // Snapshot the result format
-    let result_message = format!("Content downloaded successfully to: {}", absolute_path.display());
+    // Snapshot the relative path format (machine-independent)
+    let result_message = format!("Content downloaded successfully to: {}", file_path.display());
     insta::assert_snapshot!("fetch_grugbrain_result", result_message);
 
     // Verify file content (snapshot first 500 bytes to check it's HTML)
@@ -158,7 +158,7 @@ async fn test_filename_generation_with_extension() {
 }
 
 #[tokio::test]
-async fn test_file_path_is_absolute() {
+async fn test_file_path_is_relative() {
     // Clean up
     let _ = tokio::fs::remove_dir_all(".tempwebfetch").await;
 
@@ -172,11 +172,11 @@ async fn test_file_path_is_absolute() {
         .await
         .expect("Failed to write test file");
 
-    // Get absolute path
-    let absolute_path = std::fs::canonicalize(test_file)
-        .expect("Failed to canonicalize path");
+    // Verify the path is relative and has expected structure
+    assert!(test_file.is_relative(), "Path should be relative");
+    assert!(test_file.starts_with(".tempwebfetch"), "Path should start with .tempwebfetch");
+    assert_eq!(test_file.file_name().unwrap().to_str().unwrap(), "test.html", "Path should end with test.html");
 
-    assert!(absolute_path.is_absolute(), "Path should be absolute");
-    assert!(absolute_path.to_string_lossy().contains("webfetch2"), "Path should contain project name");
-    assert!(absolute_path.to_string_lossy().contains(".tempwebfetch"), "Path should contain .tempwebfetch");
+    // Verify we're in the project directory by checking that .tempwebfetch exists
+    assert!(Path::new(".tempwebfetch").exists(), ".tempwebfetch directory should exist in working directory");
 }

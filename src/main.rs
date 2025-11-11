@@ -107,17 +107,10 @@ impl WebFetch {
             )
         })?;
 
-        // Return absolute path
-        let absolute_path = std::fs::canonicalize(&file_path).map_err(|e| {
-            McpError::internal_error(
-                format!("Failed to get absolute path: {}", e),
-                Some(json!({"path": file_path.display().to_string(), "error": e.to_string()})),
-            )
-        })?;
-
+        // Return relative path
         Ok(CallToolResult::success(vec![Content::text(format!(
             "Content downloaded successfully to: {}",
-            absolute_path.display()
+            file_path.display()
         ))]))
     }
 
