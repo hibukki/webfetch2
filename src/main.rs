@@ -86,7 +86,7 @@ impl WebFetch {
         let status = response.status();
         if !status.is_success() {
             return Err(McpError::internal_error(
-                format!("HTTP error {}: {}. The server returned an error response.", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
+                format!("HTTP error {}: {}.", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
                 Some(json!({"url": url, "status": status.as_u16()})),
             ));
         }
