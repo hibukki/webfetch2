@@ -71,7 +71,7 @@ async fn test_fetch_creates_directory() {
 
     assert!(response.status().is_success());
 
-    let bytes = response.bytes().await.expect("Failed to read response");
+    let _bytes = response.bytes().await.expect("Failed to read response");
 
     // Create directory
     tokio::fs::create_dir_all(".tempwebfetch")
@@ -140,10 +140,10 @@ async fn test_filename_generation_with_extension() {
 
         let extension = url
             .path_segments()
-            .and_then(|segments| segments.last())
+            .and_then(|mut segments| segments.next_back())
             .and_then(|last| {
                 if last.contains('.') {
-                    last.split('.').last()
+                    last.split('.').next_back()
                 } else {
                     None
                 }
