@@ -91,6 +91,13 @@ impl WebFetch {
             ));
         }
 
+        // Capture Content-Type header before consuming response
+        let content_type = response
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+
         // Get response bytes
         let bytes = response.bytes().await.map_err(|e| {
             McpError::internal_error(
@@ -98,6 +105,15 @@ impl WebFetch {
                 Some(json!({"url": url, "error": e.to_string()})),
             )
         })?;
+
+        // Collect metadata
+        let file_size = bytes.len();
+
+        // Detect file type from magic bytes
+        let detected_type = infer::get(&bytes);
+        let magic_type = detected_type
+            .map(|t| format!("{} ({})", t.mime_type(), t.extension()))
+            .unwrap_or_else(|| "unknown".to_string());
 
         // Write to file
         tokio::fs::write(&file_path, bytes).await.map_err(|e| {
@@ -107,11 +123,25 @@ impl WebFetch {
             )
         })?;
 
-        // Return relative path
-        Ok(CallToolResult::success(vec![Content::text(format!(
-            "Content downloaded successfully to: {}",
-            file_path.display()
-        ))]))
+        // Format metadata response
+        let mut metadata_parts = vec![
+            format!("File: {}", file_path.display()),
+            format!("Size: {} bytes", file_size),
+        ];
+
+        if let Some(ct) = content_type {
+            metadata_parts.push(format!("Content-Type: {}", ct));
+        }
+
+        metadata_parts.push(format!("Detected type: {}", magic_type));
+
+        let response_text = format!(
+            "Content downloaded successfully\n\n{}",
+            metadata_parts.join("\n")
+        );
+
+        // Return relative path with metadata
+        Ok(CallToolResult::success(vec![Content::text(response_text)]))
     }
 
     fn generate_filename(url: &url::Url) -> String {
