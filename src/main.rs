@@ -21,6 +21,12 @@ pub struct WebFetch {
     tool_router: ToolRouter<WebFetch>,
 }
 
+impl Default for WebFetch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[tool_router]
 impl WebFetch {
     pub fn new() -> Self {
@@ -126,10 +132,10 @@ impl WebFetch {
         // Try to get file extension from URL path
         let extension = url
             .path_segments()
-            .and_then(|segments| segments.last())
+            .and_then(|mut segments| segments.next_back())
             .and_then(|last| {
                 if last.contains('.') {
-                    last.split('.').last()
+                    last.split('.').next_back()
                 } else {
                     None
                 }
