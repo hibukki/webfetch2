@@ -61,6 +61,9 @@ impl WebFetch {
         let filename = Self::generate_filename(&parsed_url);
         let file_path = temp_dir.join(&filename);
 
+        // Check if file already exists
+        let file_exists = file_path.exists();
+
         // Download content
         let response = reqwest::get(url.clone()).await.map_err(|e| {
             let error_str = e.to_string();
@@ -107,35 +110,50 @@ impl WebFetch {
             )
         })?;
 
-        // Return relative path
-        Ok(CallToolResult::success(vec![Content::text(format!(
-            "Content downloaded successfully to: {}",
-            file_path.display()
-        ))]))
+        // Return relative path with override message if applicable
+        let message = if file_exists {
+            format!(
+                "Content downloaded successfully to: {} (overriding existing file)",
+                file_path.display()
+            )
+        } else {
+            format!(
+                "Content downloaded successfully to: {}",
+                file_path.display()
+            )
+        };
+
+        Ok(CallToolResult::success(vec![Content::text(message)]))
     }
 
     fn generate_filename(url: &url::Url) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        url.as_str().hash(&mut hasher);
-        let hash = hasher.finish();
-
-        // Try to get file extension from URL path
-        let extension = url
+        // Check if URL path has a file extension
+        let has_extension = url
             .path_segments()
             .and_then(|mut segments| segments.next_back())
-            .and_then(|last| {
-                if last.contains('.') {
-                    last.split('.').next_back()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or("html");
+            .map(|last| last.contains('.'))
+            .unwrap_or(false);
 
-        format!("{:x}.{}", hash, extension)
+        // Convert URL to a filesystem-safe filename
+        let url_str = url.as_str();
+        let mut safe_name = url_str
+            .replace("://", "_")
+            .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '&', '=', '#'], "_")
+            .trim_end_matches('_')
+            .to_string();
+
+        // Limit length to avoid filesystem issues (255 is typical max)
+        let max_len = 240;
+        if safe_name.len() > max_len {
+            safe_name = safe_name[..max_len].trim_end_matches('_').to_string();
+        }
+
+        // Add .html extension if original URL didn't have a file extension
+        if !has_extension {
+            safe_name.push_str(".html");
+        }
+
+        safe_name
     }
 }
 
