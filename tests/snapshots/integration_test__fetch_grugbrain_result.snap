@@ -2,4 +2,4 @@
 source: tests/integration_test.rs
 expression: result_message
 ---
-Content downloaded successfully to: /Users/yonatancale/Development/webfetch2/.tempwebfetch/8c0568b060b2f1b6.html
+Content downloaded successfully to: .tempwebfetch/8c0568b060b2f1b6.html

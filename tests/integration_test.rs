@@ -42,8 +42,13 @@ async fn test_fetch_grugbrain() {
     let absolute_path = std::fs::canonicalize(&file_path)
         .expect("Failed to get absolute path");
 
-    // Snapshot the result format
-    let result_message = format!("Content downloaded successfully to: {}", absolute_path.display());
+    // Verify path is absolute and contains expected components
+    assert!(absolute_path.is_absolute(), "Path should be absolute");
+    assert!(absolute_path.to_string_lossy().contains(".tempwebfetch"), "Path should contain .tempwebfetch");
+    assert!(absolute_path.to_string_lossy().ends_with(&filename), "Path should end with correct filename");
+
+    // Snapshot just the relative path format (machine-independent)
+    let result_message = format!("Content downloaded successfully to: .tempwebfetch/{}", filename);
     insta::assert_snapshot!("fetch_grugbrain_result", result_message);
 
     // Verify file content (snapshot first 500 bytes to check it's HTML)
@@ -177,6 +182,6 @@ async fn test_file_path_is_absolute() {
         .expect("Failed to canonicalize path");
 
     assert!(absolute_path.is_absolute(), "Path should be absolute");
-    assert!(absolute_path.to_string_lossy().contains("webfetch2"), "Path should contain project name");
     assert!(absolute_path.to_string_lossy().contains(".tempwebfetch"), "Path should contain .tempwebfetch");
+    assert!(absolute_path.to_string_lossy().ends_with("test.html"), "Path should end with test.html");
 }
