@@ -1,5 +1,9 @@
 use std::path::Path;
 
+// TODO: This test is cheating - it reimplements the entire fetch logic using reqwest directly
+// instead of calling the actual WebFetch::fetch function. It hardcodes the success message
+// "Content downloaded successfully to: {}" (line 46) so changes to the real implementation
+// won't be caught. Should call the actual MCP server's fetch tool instead.
 #[tokio::test]
 async fn test_fetch_grugbrain() {
     // Clean up any existing .tempwebfetch directory
@@ -60,6 +64,9 @@ async fn test_fetch_grugbrain() {
     insta::assert_snapshot!("fetch_grugbrain_content_preview", preview);
 }
 
+// TODO: This test is cheating - it uses reqwest directly and manually creates the directory
+// itself (line 77) instead of testing whether the actual WebFetch::fetch function creates
+// the directory. Should call the actual fetch function and verify it creates the directory.
 #[tokio::test]
 async fn test_fetch_creates_directory() {
     // Clean up
@@ -84,6 +91,10 @@ async fn test_fetch_creates_directory() {
     assert!(temp_dir.is_dir(), ".tempwebfetch should be a directory");
 }
 
+// TODO: This test is cheating - it calls url::Url::parse directly and hardcodes the error
+// message format at line 98 instead of calling the actual WebFetch::fetch function.
+// If the real error message in main.rs:46 changes, this test won't detect it.
+// Should call the actual fetch function with an invalid URL and verify the error.
 #[tokio::test]
 async fn test_invalid_url_format() {
     use url::Url;
@@ -100,6 +111,11 @@ async fn test_invalid_url_format() {
     }
 }
 
+// TODO: This test is cheating - it uses reqwest directly and hardcodes the error message
+// at lines 121-125, including "The server returned an error response." which was just
+// REMOVED from the actual code in main.rs:89. The test still passes because it never
+// calls the real WebFetch::fetch function. Should call the actual fetch function with
+// a 404 URL and verify the real error message.
 #[tokio::test]
 async fn test_http_404_error() {
     let url = "https://httpbin.org/status/404";
@@ -118,6 +134,11 @@ async fn test_http_404_error() {
     insta::assert_snapshot!("http_404_error", error_message);
 }
 
+// TODO: This test is cheating - it reimplements the entire filename generation logic
+// (lines 149-163) instead of calling WebFetch::generate_filename from main.rs:117-139.
+// If the real implementation changes (e.g., different hash algorithm, different extension
+// logic), this test will keep passing with its own copy. Should call the actual
+// WebFetch::generate_filename function or test it through the fetch function.
 #[tokio::test]
 async fn test_filename_generation_with_extension() {
     use url::Url;
@@ -157,6 +178,10 @@ async fn test_filename_generation_with_extension() {
     }
 }
 
+// TODO: This test is cheating - it manually creates a test file and checks path properties
+// instead of calling the actual WebFetch::fetch function to verify what paths it returns.
+// Should call the actual fetch function and verify the returned path (from main.rs:111-113)
+// is relative and has the correct format.
 #[tokio::test]
 async fn test_file_path_is_relative() {
     // Clean up
