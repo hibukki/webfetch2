@@ -42,8 +42,19 @@ async fn test_fetch_grugbrain() {
     assert!(file_path.starts_with(".tempwebfetch"), "Path should start with .tempwebfetch");
     assert_eq!(file_path.file_name().unwrap().to_str().unwrap(), filename, "Path should end with correct filename");
 
-    // Snapshot the relative path format (machine-independent)
-    let result_message = format!("Content downloaded successfully to: {}", file_path.display());
+    // Snapshot the metadata output format (matching new output)
+    let file_size = bytes.len();
+    let detected_type = infer::get(&bytes);
+    let magic_type = detected_type
+        .map(|t| format!("{} ({})", t.mime_type(), t.extension()))
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let result_message = format!(
+        "Content downloaded successfully\n\nFile: {}\nSize: {} bytes\nDetected type: {}",
+        file_path.display(),
+        file_size,
+        magic_type
+    );
     insta::assert_snapshot!("fetch_grugbrain_result", result_message);
 
     // Verify file content (snapshot first 500 bytes to check it's HTML)
