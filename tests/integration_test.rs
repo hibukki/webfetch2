@@ -20,13 +20,26 @@ async fn test_fetch_grugbrain() {
         .expect("Failed to create .tempwebfetch directory");
 
     // Generate filename (using similar logic to the server)
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    use url::Url;
+    let parsed_url = Url::parse(url).expect("Failed to parse URL");
 
-    let mut hasher = DefaultHasher::new();
-    url.hash(&mut hasher);
-    let hash = hasher.finish();
-    let filename = format!("{:x}.html", hash);
+    let has_extension = parsed_url
+        .path_segments()
+        .and_then(|mut segments| segments.next_back())
+        .map(|last| last.contains('.'))
+        .unwrap_or(false);
+
+    let mut safe_name = url
+        .replace("://", "_")
+        .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '&', '=', '#'], "_")
+        .trim_end_matches('_')
+        .to_string();
+
+    if !has_extension {
+        safe_name.push_str(".html");
+    }
+
+    let filename = safe_name;
 
     let file_path = Path::new(".tempwebfetch").join(&filename);
 
@@ -121,39 +134,35 @@ async fn test_http_404_error() {
 #[tokio::test]
 async fn test_filename_generation_with_extension() {
     use url::Url;
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
 
     let test_cases = vec![
-        ("https://example.com/file.html", "html"),
-        ("https://example.com/data.json", "json"),
-        ("https://example.com/image.png", "png"),
-        ("https://example.com/no-extension", "html"),
+        ("https://example.com/file.html", "https_example.com_file.html"),
+        ("https://example.com/data.json", "https_example.com_data.json"),
+        ("https://example.com/image.png", "https_example.com_image.png"),
+        ("https://example.com/no-extension", "https_example.com_no-extension.html"),
+        ("https://grugbrain.dev/", "https_grugbrain.dev.html"),
     ];
 
-    for (url_str, expected_ext) in test_cases {
+    for (url_str, expected_filename) in test_cases {
         let url = Url::parse(url_str).expect("Failed to parse URL");
 
-        let mut hasher = DefaultHasher::new();
-        url.as_str().hash(&mut hasher);
-        let hash = hasher.finish();
-
-        let extension = url
+        let has_extension = url
             .path_segments()
             .and_then(|mut segments| segments.next_back())
-            .and_then(|last| {
-                if last.contains('.') {
-                    last.split('.').next_back()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or("html");
+            .map(|last| last.contains('.'))
+            .unwrap_or(false);
 
-        assert_eq!(extension, expected_ext, "Extension should match for {}", url_str);
+        let mut safe_name = url_str
+            .replace("://", "_")
+            .replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|', '&', '=', '#'], "_")
+            .trim_end_matches('_')
+            .to_string();
 
-        let filename = format!("{:x}.{}", hash, extension);
-        assert!(filename.contains(expected_ext), "Filename should contain extension");
+        if !has_extension {
+            safe_name.push_str(".html");
+        }
+
+        assert_eq!(safe_name, expected_filename, "Filename should match expected for {}", url_str);
     }
 }
 
