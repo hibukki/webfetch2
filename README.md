@@ -58,6 +58,31 @@ After adding the configuration:
 2. The MCP UI elements should appear
 3. You can now use the `fetch` tool
 
+### Claude Code Configuration
+
+Add this to your Claude Code MCP configuration file:
+
+**macOS/Linux**: `~/.config/claude-code/mcp_config.json`
+**Windows**: `%APPDATA%\claude-code\mcp_config.json`
+
+```json
+{
+  "mcpServers": {
+    "webfetch2": {
+      "command": "/absolute/path/to/webfetch2/target/release/webfetch2",
+      "args": []
+    }
+  }
+}
+```
+
+**Note**: Make sure to replace `/absolute/path/to/webfetch2` with the actual absolute path to your webfetch2 project directory.
+
+After adding the configuration:
+1. Restart Claude Code or reload the MCP configuration
+2. The `mcp__webfetch2__fetch` tool will be available
+3. You can now use the fetch tool in your Claude Code sessions
+
 ### Example Usage in Claude
 
 ```
