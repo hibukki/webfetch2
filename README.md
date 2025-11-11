@@ -54,34 +54,19 @@ Add this to your Claude Desktop configuration file:
 ```
 
 After adding the configuration:
+
 1. Restart Claude Desktop
 2. The MCP UI elements should appear
 3. You can now use the `fetch` tool
 
 ### Claude Code Configuration
 
-Add this to your Claude Code MCP configuration file:
-
-**macOS/Linux**: `~/.config/claude-code/mcp_config.json`
-**Windows**: `%APPDATA%\claude-code\mcp_config.json`
-
-```json
-{
-  "mcpServers": {
-    "webfetch2": {
-      "command": "/absolute/path/to/webfetch2/target/release/webfetch2",
-      "args": []
-    }
-  }
-}
+```sh
+cargo build --release && claude mcp add --transport stdio webfetch2 -- "$(pwd)/target/release/webfetch2"
 ```
 
-**Note**: Make sure to replace `/absolute/path/to/webfetch2` with the actual absolute path to your webfetch2 project directory.
-
-After adding the configuration:
-1. Restart Claude Code or reload the MCP configuration
-2. The `mcp__webfetch2__fetch` tool will be available
-3. You can now use the fetch tool in your Claude Code sessions
+Then restart Claude Code.
+Verify the tool is available with `/mcp`
 
 ### Example Usage in Claude
 
@@ -90,6 +75,7 @@ Use the fetch tool to download https://grugbrain.dev/
 ```
 
 The server will:
+
 1. Download the content from the URL
 2. Save it to `.tempwebfetch/` with a content-addressed filename
 3. Return the absolute path to the downloaded file
@@ -101,12 +87,15 @@ The server will:
 Downloads content from a URL and saves it locally.
 
 **Parameters:**
+
 - `url` (string, required): The URL to fetch content from
 
 **Returns:**
+
 - Success message with the absolute file path
 
 **Example:**
+
 ```json
 {
   "url": "https://example.com/page.html"
@@ -114,6 +103,7 @@ Downloads content from a URL and saves it locally.
 ```
 
 **Response:**
+
 ```
 Content downloaded successfully to: /absolute/path/to/webfetch2/.tempwebfetch/8c0568b060b2f1b6.html
 ```
@@ -189,6 +179,7 @@ Contributions are welcome! Please ensure:
 ## Acknowledgments
 
 Built with:
+
 - [rmcp](https://github.com/modelcontextprotocol/rust-sdk) - Rust MCP SDK
 - [reqwest](https://github.com/seanmonstar/reqwest) - HTTP client
 - [tokio](https://tokio.rs/) - Async runtime
