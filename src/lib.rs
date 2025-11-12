@@ -1,14 +1,10 @@
-// Re-export types and functions from main for testing
-// This is a workaround since our binary is in main.rs
-// We include the main.rs file as a module to expose its types for testing
-
 use anyhow::Result;
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
     handler::server::{router::tool::ToolRouter, wrapper::Parameters},
     model::*,
     service::RequestContext,
-    tool, tool_handler, tool_router, ServiceExt,
+    tool, tool_handler, tool_router,
 };
 use serde_json::json;
 use std::path::PathBuf;
@@ -39,7 +35,7 @@ impl WebFetch {
     }
 
     #[tool(description = "Download content from a URL and save it to .tempwebfetch/ directory. Returns the local file path where the content was saved.")]
-    async fn fetch(
+    pub async fn fetch(
         &self,
         Parameters(FetchRequest { url }): Parameters<FetchRequest>,
     ) -> Result<CallToolResult, McpError> {
@@ -89,7 +85,7 @@ impl WebFetch {
         let status = response.status();
         if !status.is_success() {
             return Err(McpError::internal_error(
-                format!("HTTP error {}: {}. The server returned an error response.", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
+                format!("HTTP error {}: {}.", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
                 Some(json!({"url": url, "status": status.as_u16()})),
             ));
         }
@@ -120,7 +116,7 @@ impl WebFetch {
             )
         })?;
 
-        // Format response using the public method
+        // Format response with metadata
         let response_text = Self::format_success_message(&file_path, file_size, content_type, &bytes);
 
         // Return relative path with metadata

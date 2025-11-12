@@ -2,4 +2,4 @@
 source: tests/integration_test.rs
 expression: error_message
 ---
-HTTP error 404: Not Found. The server returned an error response.
+HTTP error 404: Not Found.
