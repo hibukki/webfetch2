@@ -132,7 +132,7 @@ impl WebFetch {
         // Detect file type from magic bytes
         let detected_type = infer::get(bytes);
         let magic_type = detected_type
-            .map(|t| format!("{} ({})", t.mime_type(), t.extension()))
+            .map(|t| t.mime_type().to_string())
             .unwrap_or_else(|| "unknown".to_string());
 
         // Format metadata response
