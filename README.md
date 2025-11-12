@@ -6,20 +6,7 @@ A better web fetch tool that simply downloads the file and lets the caller (e.g 
 
 ### Prerequisites
 
-- Rust 1.70+ (install from [rustup.rs](https://rustup.rs/))
-- Cargo (comes with Rust)
-
-### Build from Source
-
-```bash
-# Clone the repository (or navigate to the project directory)
-cd webfetch2
-
-# Build the project
-cargo build --release
-
-# The binary will be at: target/release/webfetch2
-```
+[rust](https://rustup.rs/)
 
 ## Usage
 
