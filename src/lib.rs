@@ -35,7 +35,7 @@ impl WebFetch {
     }
 
     #[tool(description = "Download content from a URL and save it to .tempwebfetch/ directory. Returns the local file path where the content was saved.")]
-    async fn fetch(
+    pub async fn fetch(
         &self,
         Parameters(FetchRequest { url }): Parameters<FetchRequest>,
     ) -> Result<CallToolResult, McpError> {
@@ -113,7 +113,7 @@ impl WebFetch {
         ))]))
     }
 
-    pub fn generate_filename(url: &url::Url) -> String {
+    fn generate_filename(url: &url::Url) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
