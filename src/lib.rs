@@ -114,12 +114,12 @@ impl WebFetch {
     }
 
     fn generate_filename(url: &url::Url) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
+        use sha2::{Sha256, Digest};
 
-        let mut hasher = DefaultHasher::new();
-        url.as_str().hash(&mut hasher);
-        let hash = hasher.finish();
+        // Use SHA-256 for stable hashing across runs and Rust versions
+        let mut hasher = Sha256::new();
+        hasher.update(url.as_str().as_bytes());
+        let hash = hasher.finalize();
 
         // Try to get file extension from URL path
         let extension = url
@@ -134,7 +134,8 @@ impl WebFetch {
             })
             .unwrap_or("html");
 
-        format!("{:x}.{}", hash, extension)
+        // Use first 16 hex characters of SHA-256 hash to keep filenames reasonable
+        format!("{:x}.{}", &hash[..8].iter().fold(0u64, |acc, &b| (acc << 8) | b as u64), extension)
     }
 }
 

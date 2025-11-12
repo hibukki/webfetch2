@@ -1,5 +1,6 @@
 ---
 source: tests/integration_test.rs
-expression: result_message
+assertion_line: 34
+expression: result_text
 ---
-Content downloaded successfully to: .tempwebfetch/8c0568b060b2f1b6.html
+Content downloaded successfully to: .tempwebfetch/8561ce065e3cd2a9.html
