@@ -118,6 +118,16 @@ fn test_initialize() {
 
     // Verify server info exists
     assert!(result["serverInfo"].is_object());
+
+    // Snapshot the result structure (normalize dynamic fields)
+    let mut normalized = result.clone();
+    // Remove version info that might change
+    if let Some(server_info) = normalized.get_mut("serverInfo") {
+        if let Some(obj) = server_info.as_object_mut() {
+            obj.remove("version");
+        }
+    }
+    insta::assert_json_snapshot!("initialize_result", normalized);
 }
 
 #[test]
@@ -142,6 +152,11 @@ fn test_tools_list() {
     assert_eq!(fetch_tool["name"], "fetch");
     assert!(fetch_tool["description"].is_string());
     assert!(fetch_tool["inputSchema"].is_object());
+
+    // Snapshot the full response (normalize dynamic id)
+    let mut normalized = response.clone();
+    normalized["id"] = json!("<dynamic>");
+    insta::assert_json_snapshot!("tools_list_response", normalized);
 }
 
 #[test]
@@ -192,6 +207,24 @@ fn test_fetch_success() {
         response["result"]["isError"].is_null() || response["result"]["isError"] == false,
         "isError should be false or null"
     );
+
+    // Snapshot the response structure (normalize dynamic fields)
+    let mut normalized = response.clone();
+    normalized["id"] = json!("<dynamic>");
+    // Normalize the file path to remove hash
+    if let Some(content_array) = normalized["result"]["content"].as_array_mut() {
+        if let Some(first) = content_array.first_mut() {
+            if let Some(text) = first["text"].as_str() {
+                // Replace the hash in the file path with <hash>
+                let normalized_text = text.replace(
+                    &text.split('/').last().unwrap_or(""),
+                    "<hash>.html"
+                );
+                first["text"] = json!(normalized_text);
+            }
+        }
+    }
+    insta::assert_json_snapshot!("fetch_success_response", normalized);
 }
 
 #[test]
@@ -228,6 +261,11 @@ fn test_fetch_invalid_url() {
         message.to_lowercase().contains("invalid url") || message.to_lowercase().contains("url"),
         "Error message should mention URL issue: {message}"
     );
+
+    // Snapshot the error response (normalize dynamic id)
+    let mut normalized = response.clone();
+    normalized["id"] = json!("<dynamic>");
+    insta::assert_json_snapshot!("fetch_invalid_url_response", normalized);
 }
 
 #[test]
@@ -262,6 +300,11 @@ fn test_fetch_http_error() {
         message.contains("404") || message.to_lowercase().contains("http error"),
         "Error message should mention HTTP error: {message}"
     );
+
+    // Snapshot the error response (normalize dynamic id)
+    let mut normalized = response.clone();
+    normalized["id"] = json!("<dynamic>");
+    insta::assert_json_snapshot!("fetch_http_error_response", normalized);
 }
 
 #[test]

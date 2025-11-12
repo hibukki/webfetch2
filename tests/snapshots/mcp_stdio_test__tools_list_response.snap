@@ -1,0 +1,31 @@
+---
+source: tests/mcp_stdio_test.rs
+assertion_line: 159
+expression: normalized
+---
+{
+  "id": "<dynamic>",
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "description": "Download content from a URL and save it to .tempwebfetch/ directory. Returns the local file path where the content was saved.",
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "properties": {
+            "url": {
+              "description": "The URL to fetch content from",
+              "type": "string"
+            }
+          },
+          "required": [
+            "url"
+          ],
+          "title": "FetchRequest",
+          "type": "object"
+        },
+        "name": "fetch"
+      }
+    ]
+  }
+}

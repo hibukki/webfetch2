@@ -1,0 +1,15 @@
+---
+source: tests/mcp_stdio_test.rs
+assertion_line: 130
+expression: normalized
+---
+{
+  "capabilities": {
+    "tools": {}
+  },
+  "instructions": "This server provides a tool to download web content. Use the 'fetch' tool with a URL to download content to the .tempwebfetch/ directory.",
+  "protocolVersion": "2024-11-05",
+  "serverInfo": {
+    "name": "rmcp"
+  }
+}

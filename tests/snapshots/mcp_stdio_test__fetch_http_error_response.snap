@@ -1,0 +1,17 @@
+---
+source: tests/mcp_stdio_test.rs
+assertion_line: 307
+expression: normalized
+---
+{
+  "error": {
+    "code": -32603,
+    "data": {
+      "status": 404,
+      "url": "https://httpbin.org/status/404"
+    },
+    "message": "HTTP error 404: Not Found."
+  },
+  "id": "<dynamic>",
+  "jsonrpc": "2.0"
+}

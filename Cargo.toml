@@ -20,4 +20,4 @@ tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 url = "2.5.7"
 
 [dev-dependencies]
-insta = "1.43.2"
+insta = { version = "1.43.2", features = ["json"] }

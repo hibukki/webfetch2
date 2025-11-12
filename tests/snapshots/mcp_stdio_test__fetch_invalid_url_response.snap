@@ -1,0 +1,17 @@
+---
+source: tests/mcp_stdio_test.rs
+assertion_line: 268
+expression: normalized
+---
+{
+  "error": {
+    "code": -32602,
+    "data": {
+      "error": "relative URL without a base",
+      "url": "not-a-valid-url"
+    },
+    "message": "Invalid URL: relative URL without a base. Please provide a valid HTTP/HTTPS URL (e.g., https://example.com)"
+  },
+  "id": "<dynamic>",
+  "jsonrpc": "2.0"
+}

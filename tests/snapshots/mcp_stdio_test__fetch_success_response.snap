@@ -1,0 +1,18 @@
+---
+source: tests/mcp_stdio_test.rs
+assertion_line: 227
+expression: normalized
+---
+{
+  "id": "<dynamic>",
+  "jsonrpc": "2.0",
+  "result": {
+    "content": [
+      {
+        "text": "Content downloaded successfully to: .tempwebfetch/<hash>.html",
+        "type": "text"
+      }
+    ],
+    "isError": false
+  }
+}
