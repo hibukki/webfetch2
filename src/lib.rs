@@ -58,25 +58,28 @@ impl WebFetch {
         let filename = Self::generate_filename(&parsed_url);
         let file_path = temp_dir.join(&filename);
 
-        // Build llms.txt URL for this domain
-        let llms_txt_url = format!(
-            "{}://{}/llms.txt",
+        // Build llms file URLs for this domain
+        let base_url = format!(
+            "{}://{}",
             parsed_url.scheme(),
             parsed_url.host_str().unwrap_or("")
         );
-        let llms_txt_path = temp_dir.join(format!(
-            "llms_{}.txt",
-            parsed_url.host_str().unwrap_or("unknown")
-        ));
+        let host = parsed_url.host_str().unwrap_or("unknown");
+
+        let llms_files = [
+            ("llms.txt", format!("{base_url}/llms.txt"), temp_dir.join(format!("llms_{host}.txt"))),
+            ("llms-ctx.txt", format!("{base_url}/llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}.txt"))),
+            ("llms-ctx-full.txt", format!("{base_url}/llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}.txt"))),
+        ];
 
         if use_cache && file_path.exists() {
             let metadata = tokio::fs::metadata(&file_path).await.ok();
             let size = metadata.map(|m| m.len()).unwrap_or(0);
-            let llms_note = if llms_txt_path.exists() {
-                format!("\nllms.txt: {}", llms_txt_path.display())
-            } else {
-                String::new()
-            };
+            let llms_note: String = llms_files
+                .iter()
+                .filter(|(_, _, path)| path.exists())
+                .map(|(name, _, path)| format!("\n{name}: {}", path.display()))
+                .collect();
             return Ok(CallToolResult::success(vec![Content::text(format!(
                 "Cached: {} ({} bytes){llms_note}",
                 file_path.display(),
@@ -84,10 +87,14 @@ impl WebFetch {
             ))]));
         }
 
-        // Fetch main URL and llms.txt in parallel
-        let main_fetch = reqwest::get(url.clone());
-        let llms_fetch = reqwest::get(&llms_txt_url);
-        let (main_result, llms_result) = tokio::join!(main_fetch, llms_fetch);
+        // Fetch main URL and all llms files in parallel
+        let (main_result, llms0, llms1, llms2) = tokio::join!(
+            reqwest::get(url.clone()),
+            reqwest::get(&llms_files[0].1),
+            reqwest::get(&llms_files[1].1),
+            reqwest::get(&llms_files[2].1),
+        );
+        let llms_results = [llms0, llms1, llms2];
 
         // Process main response
         let response = main_result.map_err(|e| {
@@ -127,23 +134,24 @@ impl WebFetch {
             )
         })?;
 
-        // Process llms.txt if successful
-        let llms_note = if let Ok(llms_response) = llms_result {
-            if llms_response.status().is_success() {
-                if let Ok(llms_bytes) = llms_response.bytes().await {
-                    if tokio::fs::write(&llms_txt_path, &llms_bytes).await.is_ok() {
-                        format!("\nllms.txt: {} ({} bytes)", llms_txt_path.display(), llms_bytes.len())
-                    } else {
-                        String::new()
+        // Process llms files if successful
+        let mut llms_notes = Vec::new();
+        for (i, result) in llms_results.into_iter().enumerate() {
+            if let Ok(resp) = result {
+                if resp.status().is_success() {
+                    if let Ok(bytes) = resp.bytes().await {
+                        let (name, _, path) = &llms_files[i];
+                        if tokio::fs::write(path, &bytes).await.is_ok() {
+                            llms_notes.push(format!("{name}: {} ({} bytes)", path.display(), bytes.len()));
+                        }
                     }
-                } else {
-                    String::new()
                 }
-            } else {
-                String::new()
             }
-        } else {
+        }
+        let llms_note = if llms_notes.is_empty() {
             String::new()
+        } else {
+            format!("\n{}", llms_notes.join("\n"))
         };
 
         let type_info = content_type.map(|t| format!(", {t}")).unwrap_or_default();
