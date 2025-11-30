@@ -11,7 +11,7 @@ Requires [Rust](https://rustup.rs/).
 ### From GitHub (no clone needed)
 
 ```sh
-cargo install --git https://github.com/USER/webfetch2
+cargo install --git https://github.com/hibukki/webfetch2
 claude mcp remove webfetch2 ; claude mcp add --transport stdio webfetch2 -- ~/.cargo/bin/webfetch2
 ```
 
