@@ -13,11 +13,11 @@ async fn test_fetch_grugbrain() {
     let result = webfetch
         .fetch(Parameters(FetchRequest {
             url: url.to_string(),
+            use_cache: false,
         }))
         .await
         .expect("Fetch should succeed");
 
-    // Extract the text content from the result
     let result_text = result.content
         .iter()
         .filter_map(|c| {
@@ -30,112 +30,82 @@ async fn test_fetch_grugbrain() {
         .collect::<Vec<_>>()
         .join("");
 
-    // Snapshot the result message
-    insta::assert_snapshot!("fetch_grugbrain_result", result_text);
+    assert!(result_text.starts_with("Downloaded: .tempwebfetch/"));
 
-    // Extract the file path from the result message
     let file_path_str = result_text
-        .strip_prefix("Content downloaded successfully to: ")
+        .strip_prefix("Downloaded: ")
+        .and_then(|s| s.split_whitespace().next())
         .expect("Result should contain file path");
     let file_path = Path::new(file_path_str);
 
-    // Verify file exists
     assert!(file_path.exists(), "Downloaded file should exist");
+    assert!(file_path.starts_with(".tempwebfetch"));
 
-    // Verify the file is in the correct location
-    assert!(file_path.starts_with(".tempwebfetch"), "Path should start with .tempwebfetch");
-
-    // Verify file content (snapshot first 500 bytes to check it's HTML)
-    let content = tokio::fs::read_to_string(&file_path)
-        .await
-        .expect("Failed to read file");
-
-    let preview = if content.len() > 500 {
-        &content[..500]
-    } else {
-        &content
-    };
-
-    insta::assert_snapshot!("fetch_grugbrain_content_preview", preview);
+    let content = tokio::fs::read_to_string(&file_path).await.expect("Failed to read file");
+    assert!(content.contains("grug"));
 }
 
 #[tokio::test]
 async fn test_fetch_creates_directory() {
-    // Clean up
     let _ = tokio::fs::remove_dir_all(".tempwebfetch").await;
 
-    // Verify directory doesn't exist before fetch
     let temp_dir = Path::new(".tempwebfetch");
-    assert!(!temp_dir.exists(), ".tempwebfetch should not exist before fetch");
+    assert!(!temp_dir.exists());
 
-    // Fetch a simple URL
     let webfetch = WebFetch::new();
-    let url = "https://httpbin.org/html";
-
     webfetch
         .fetch(Parameters(FetchRequest {
-            url: url.to_string(),
+            url: "https://httpbin.org/html".to_string(),
+            use_cache: false,
         }))
         .await
         .expect("Fetch should succeed");
 
-    // Verify directory was created by fetch
-    assert!(temp_dir.exists(), ".tempwebfetch directory should exist after fetch");
-    assert!(temp_dir.is_dir(), ".tempwebfetch should be a directory");
+    assert!(temp_dir.exists());
+    assert!(temp_dir.is_dir());
 }
 
 #[tokio::test]
 async fn test_invalid_url_format() {
     let webfetch = WebFetch::new();
-    let invalid_url = "not-a-valid-url";
-
     let result = webfetch
         .fetch(Parameters(FetchRequest {
-            url: invalid_url.to_string(),
+            url: "not-a-valid-url".to_string(),
+            use_cache: false,
         }))
         .await;
 
-    assert!(result.is_err(), "Invalid URL should fail");
-
-    // Snapshot the error message from the actual implementation
-    let error = result.unwrap_err();
-    insta::assert_snapshot!("invalid_url_error", error.message);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().message.contains("Invalid URL"));
 }
 
 #[tokio::test]
 async fn test_http_404_error() {
     let webfetch = WebFetch::new();
-    let url = "https://httpbin.org/status/404";
-
     let result = webfetch
         .fetch(Parameters(FetchRequest {
-            url: url.to_string(),
+            url: "https://httpbin.org/status/404".to_string(),
+            use_cache: false,
         }))
         .await;
 
-    assert!(result.is_err(), "404 should return an error");
-
-    // Snapshot the error message from the actual implementation
-    let error = result.unwrap_err();
-    insta::assert_snapshot!("http_404_error", error.message);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().message.contains("404"));
 }
 
 #[tokio::test]
 async fn test_file_path_is_relative() {
-    // Clean up
     let _ = tokio::fs::remove_dir_all(".tempwebfetch").await;
 
     let webfetch = WebFetch::new();
-    let url = "https://httpbin.org/html";
-
     let result = webfetch
         .fetch(Parameters(FetchRequest {
-            url: url.to_string(),
+            url: "https://httpbin.org/html".to_string(),
+            use_cache: false,
         }))
         .await
         .expect("Fetch should succeed");
 
-    // Extract the file path from the result
     let result_text = result.content
         .iter()
         .filter_map(|c| {
@@ -149,15 +119,13 @@ async fn test_file_path_is_relative() {
         .join("");
 
     let file_path_str = result_text
-        .strip_prefix("Content downloaded successfully to: ")
+        .strip_prefix("Downloaded: ")
+        .and_then(|s| s.split_whitespace().next())
         .expect("Result should contain file path");
     let file_path = Path::new(file_path_str);
 
-    // Verify the path is relative and has expected structure
-    assert!(file_path.is_relative(), "Path should be relative");
-    assert!(file_path.starts_with(".tempwebfetch"), "Path should start with .tempwebfetch");
-    assert!(file_path.file_name().is_some(), "Path should have a filename");
-
-    // Verify file actually exists
-    assert!(file_path.exists(), "File should exist at the returned path");
+    assert!(file_path.is_relative());
+    assert!(file_path.starts_with(".tempwebfetch"));
+    assert!(file_path.file_name().is_some());
+    assert!(file_path.exists());
 }

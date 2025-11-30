@@ -11,8 +11,9 @@ use std::path::PathBuf;
 
 #[derive(Debug, serde::Deserialize, schemars::JsonSchema)]
 pub struct FetchRequest {
-    /// The URL to fetch content from
     pub url: String,
+    #[serde(default)]
+    pub use_cache: bool,
 }
 
 #[derive(Clone)]
@@ -34,82 +35,82 @@ impl WebFetch {
         }
     }
 
-    #[tool(description = "Download content from a URL and save it to .tempwebfetch/ directory. Returns the local file path where the content was saved.")]
+    #[tool(description = "Download content from a URL and save it to .tempwebfetch/ directory.")]
     pub async fn fetch(
         &self,
-        Parameters(FetchRequest { url }): Parameters<FetchRequest>,
+        Parameters(FetchRequest { url, use_cache }): Parameters<FetchRequest>,
     ) -> Result<CallToolResult, McpError> {
-        // Validate URL
         let parsed_url = url::Url::parse(&url).map_err(|e| {
             McpError::invalid_params(
-                format!("Invalid URL: {}. Please provide a valid HTTP/HTTPS URL (e.g., https://example.com)", e),
+                format!("Invalid URL: {e}"),
                 Some(json!({"url": url, "error": e.to_string()})),
             )
         })?;
 
-        // Create .tempwebfetch directory if it doesn't exist
         let temp_dir = PathBuf::from(".tempwebfetch");
         tokio::fs::create_dir_all(&temp_dir).await.map_err(|e| {
             McpError::internal_error(
-                format!("Failed to create .tempwebfetch directory: {}. Check file permissions.", e),
+                format!("Failed to create .tempwebfetch directory: {e}"),
                 Some(json!({"error": e.to_string()})),
             )
         })?;
 
-        // Generate filename from URL
         let filename = Self::generate_filename(&parsed_url);
         let file_path = temp_dir.join(&filename);
 
-        // Download content
-        let response = reqwest::get(url.clone()).await.map_err(|e| {
-            let error_str = e.to_string();
-            if e.is_timeout() {
-                McpError::internal_error(
-                    "Request timed out. Check your network connection and try again.",
-                    Some(json!({"url": url, "error": error_str})),
-                )
-            } else if e.is_connect() {
-                McpError::internal_error(
-                    "Failed to connect to the server. Check your network connection and that the URL is accessible.",
-                    Some(json!({"url": url, "error": error_str})),
-                )
-            } else {
-                McpError::internal_error(
-                    format!("Failed to fetch URL: {}", error_str),
-                    Some(json!({"url": url, "error": error_str})),
-                )
-            }
-        })?;
-
-        // Check HTTP status
-        let status = response.status();
-        if !status.is_success() {
-            return Err(McpError::internal_error(
-                format!("HTTP error {}: {}.", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
-                Some(json!({"url": url, "status": status.as_u16()})),
-            ));
+        if use_cache && file_path.exists() {
+            let metadata = tokio::fs::metadata(&file_path).await.ok();
+            let size = metadata.map(|m| m.len()).unwrap_or(0);
+            return Ok(CallToolResult::success(vec![Content::text(format!(
+                "Cached: {} ({} bytes)",
+                file_path.display(),
+                size
+            ))]));
         }
 
-        // Get response bytes
-        let bytes = response.bytes().await.map_err(|e| {
+        let response = reqwest::get(url.clone()).await.map_err(|e| {
             McpError::internal_error(
-                format!("Failed to read response body: {}", e),
+                format!("Failed to fetch URL: {e}"),
                 Some(json!({"url": url, "error": e.to_string()})),
             )
         })?;
 
-        // Write to file
-        tokio::fs::write(&file_path, bytes).await.map_err(|e| {
+        let status = response.status();
+        if !status.is_success() {
+            return Err(McpError::internal_error(
+                format!("HTTP {}: {}", status.as_u16(), status.canonical_reason().unwrap_or("Unknown")),
+                Some(json!({"url": url, "status": status.as_u16()})),
+            ));
+        }
+
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .map(|s| s.to_string());
+
+        let bytes = response.bytes().await.map_err(|e| {
             McpError::internal_error(
-                format!("Failed to write file: {}. Check disk space and file permissions.", e),
+                format!("Failed to read response body: {e}"),
+                Some(json!({"url": url, "error": e.to_string()})),
+            )
+        })?;
+
+        let size = bytes.len();
+
+        tokio::fs::write(&file_path, &bytes).await.map_err(|e| {
+            McpError::internal_error(
+                format!("Failed to write file: {e}"),
                 Some(json!({"path": file_path.display().to_string(), "error": e.to_string()})),
             )
         })?;
 
-        // Return relative path
+        let type_info = content_type.map(|t| format!(", {t}")).unwrap_or_default();
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Content downloaded successfully to: {}",
-            file_path.display()
+            "Downloaded: {} ({} bytes{})",
+            file_path.display(),
+            size,
+            type_info
         ))]))
     }
 
@@ -119,22 +120,23 @@ impl WebFetch {
 
         let mut hasher = DefaultHasher::new();
         url.as_str().hash(&mut hasher);
-        let hash = hasher.finish();
+        let hash_suffix = format!("{:x}", hasher.finish() & 0xFFFF); // short 4-char suffix
 
-        // Try to get file extension from URL path
-        let extension = url
+        let last_segment = url
             .path_segments()
             .and_then(|mut segments| segments.next_back())
-            .and_then(|last| {
-                if last.contains('.') {
-                    last.split('.').next_back()
-                } else {
-                    None
-                }
-            })
-            .unwrap_or("html");
+            .filter(|s| !s.is_empty());
 
-        format!("{:x}.{}", hash, extension)
+        match last_segment {
+            Some(name) if name.contains('.') => {
+                let sanitized: String = name
+                    .chars()
+                    .map(|c| if c.is_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' })
+                    .collect();
+                format!("{sanitized}_{hash_suffix}")
+            }
+            _ => format!("{hash_suffix}.html"),
+        }
     }
 }
 

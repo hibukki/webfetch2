@@ -173,19 +173,12 @@ fn test_fetch_success() {
 
     assert!(!content.is_empty(), "Content should not be empty");
 
-    // Verify the text mentions successful download
     let text = content[0]["text"]
         .as_str()
         .expect("First content item should have text");
 
-    assert!(
-        text.starts_with("Content downloaded successfully to:"),
-        "Response should indicate success"
-    );
-    assert!(
-        text.contains(".tempwebfetch"),
-        "Response should mention the temp directory"
-    );
+    assert!(text.starts_with("Downloaded:"));
+    assert!(text.contains(".tempwebfetch"));
 
     // Verify isError is false or not present
     assert!(

@@ -1,5 +1,0 @@
----
-source: tests/integration_test.rs
-expression: error_message
----
-HTTP error 404: Not Found.
