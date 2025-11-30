@@ -58,7 +58,7 @@ impl WebFetch {
         let filename = Self::generate_filename(&parsed_url);
         let file_path = temp_dir.join(&filename);
 
-        // Build llms file URLs for this domain
+        // Build llms file URLs for root and subpath
         let base_url = format!(
             "{}://{}",
             parsed_url.scheme(),
@@ -66,11 +66,30 @@ impl WebFetch {
         );
         let host = parsed_url.host_str().unwrap_or("unknown");
 
-        let llms_files = [
+        // Get parent directory path (e.g., "/docs/page.html" -> "/docs/")
+        let path = parsed_url.path();
+        let parent_path = if path.ends_with('/') {
+            path.to_string()
+        } else {
+            path.rsplit_once('/').map(|(p, _)| format!("{p}/")).unwrap_or_else(|| "/".to_string())
+        };
+
+        // Build list of llms files to check (root + subpath if different)
+        let mut llms_files = vec![
             ("llms.txt", format!("{base_url}/llms.txt"), temp_dir.join(format!("llms_{host}.txt"))),
             ("llms-ctx.txt", format!("{base_url}/llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}.txt"))),
             ("llms-ctx-full.txt", format!("{base_url}/llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}.txt"))),
         ];
+
+        // Add subpath llms files if not at root
+        if parent_path != "/" {
+            let subpath_id = parent_path.trim_matches('/').replace('/', "_");
+            llms_files.extend([
+                ("llms.txt (subpath)", format!("{base_url}{parent_path}llms.txt"), temp_dir.join(format!("llms_{host}_{subpath_id}.txt"))),
+                ("llms-ctx.txt (subpath)", format!("{base_url}{parent_path}llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}_{subpath_id}.txt"))),
+                ("llms-ctx-full.txt (subpath)", format!("{base_url}{parent_path}llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}_{subpath_id}.txt"))),
+            ]);
+        }
 
         if use_cache && file_path.exists() {
             let metadata = tokio::fs::metadata(&file_path).await.ok();
@@ -88,13 +107,11 @@ impl WebFetch {
         }
 
         // Fetch main URL and all llms files in parallel
-        let (main_result, llms0, llms1, llms2) = tokio::join!(
+        let llms_futures: Vec<_> = llms_files.iter().map(|(_, url, _)| reqwest::get(url)).collect();
+        let (main_result, llms_results) = tokio::join!(
             reqwest::get(url.clone()),
-            reqwest::get(&llms_files[0].1),
-            reqwest::get(&llms_files[1].1),
-            reqwest::get(&llms_files[2].1),
+            futures::future::join_all(llms_futures),
         );
-        let llms_results = [llms0, llms1, llms2];
 
         // Process main response
         let response = main_result.map_err(|e| {
