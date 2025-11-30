@@ -35,7 +35,7 @@ impl WebFetch {
         }
     }
 
-    #[tool(description = "Download content from a URL and save it to .tempwebfetch/ directory.")]
+    #[tool(description = "Download content from a URL and save it to .tempwebfetch/ directory. Also checks for /llms.txt on the domain.")]
     pub async fn fetch(
         &self,
         Parameters(FetchRequest { url, use_cache }): Parameters<FetchRequest>,
@@ -58,17 +58,39 @@ impl WebFetch {
         let filename = Self::generate_filename(&parsed_url);
         let file_path = temp_dir.join(&filename);
 
+        // Build llms.txt URL for this domain
+        let llms_txt_url = format!(
+            "{}://{}/llms.txt",
+            parsed_url.scheme(),
+            parsed_url.host_str().unwrap_or("")
+        );
+        let llms_txt_path = temp_dir.join(format!(
+            "llms_{}.txt",
+            parsed_url.host_str().unwrap_or("unknown")
+        ));
+
         if use_cache && file_path.exists() {
             let metadata = tokio::fs::metadata(&file_path).await.ok();
             let size = metadata.map(|m| m.len()).unwrap_or(0);
+            let llms_note = if llms_txt_path.exists() {
+                format!("\nllms.txt: {}", llms_txt_path.display())
+            } else {
+                String::new()
+            };
             return Ok(CallToolResult::success(vec![Content::text(format!(
-                "Cached: {} ({} bytes)",
+                "Cached: {} ({} bytes){llms_note}",
                 file_path.display(),
                 size
             ))]));
         }
 
-        let response = reqwest::get(url.clone()).await.map_err(|e| {
+        // Fetch main URL and llms.txt in parallel
+        let main_fetch = reqwest::get(url.clone());
+        let llms_fetch = reqwest::get(&llms_txt_url);
+        let (main_result, llms_result) = tokio::join!(main_fetch, llms_fetch);
+
+        // Process main response
+        let response = main_result.map_err(|e| {
             McpError::internal_error(
                 format!("Failed to fetch URL: {e}"),
                 Some(json!({"url": url, "error": e.to_string()})),
@@ -105,9 +127,28 @@ impl WebFetch {
             )
         })?;
 
+        // Process llms.txt if successful
+        let llms_note = if let Ok(llms_response) = llms_result {
+            if llms_response.status().is_success() {
+                if let Ok(llms_bytes) = llms_response.bytes().await {
+                    if tokio::fs::write(&llms_txt_path, &llms_bytes).await.is_ok() {
+                        format!("\nllms.txt: {} ({} bytes)", llms_txt_path.display(), llms_bytes.len())
+                    } else {
+                        String::new()
+                    }
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+
         let type_info = content_type.map(|t| format!(", {t}")).unwrap_or_default();
         Ok(CallToolResult::success(vec![Content::text(format!(
-            "Downloaded: {} ({} bytes{})",
+            "Downloaded: {} ({} bytes{}){llms_note}",
             file_path.display(),
             size,
             type_info
