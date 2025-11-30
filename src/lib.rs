@@ -55,8 +55,7 @@ impl WebFetch {
             )
         })?;
 
-        let filename = Self::generate_filename(&parsed_url);
-        let file_path = temp_dir.join(&filename);
+        let file_path = Self::generate_file_path(&temp_dir, &parsed_url);
 
         // Build llms file URLs for root and subpath
         let base_url = format!(
@@ -181,29 +180,34 @@ impl WebFetch {
         ))]))
     }
 
-    fn generate_filename(url: &url::Url) -> String {
+    fn generate_file_path(temp_dir: &PathBuf, url: &url::Url) -> PathBuf {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        url.as_str().hash(&mut hasher);
-        let hash_suffix = format!("{:x}", hasher.finish() & 0xFFFF); // short 4-char suffix
 
         let last_segment = url
             .path_segments()
             .and_then(|mut segments| segments.next_back())
             .filter(|s| !s.is_empty());
 
-        match last_segment {
+        let base_name = match last_segment {
             Some(name) if name.contains('.') => {
-                let sanitized: String = name
-                    .chars()
+                name.chars()
                     .map(|c| if c.is_alphanumeric() || c == '.' || c == '-' || c == '_' { c } else { '_' })
-                    .collect();
-                format!("{sanitized}_{hash_suffix}")
+                    .collect::<String>()
             }
-            _ => format!("{hash_suffix}.html"),
+            _ => "index.html".to_string(),
+        };
+
+        let base_path = temp_dir.join(&base_name);
+        if !base_path.exists() {
+            return base_path;
         }
+
+        // Conflict: add hash suffix
+        let mut hasher = DefaultHasher::new();
+        url.as_str().hash(&mut hasher);
+        let hash_suffix = format!("{:x}", hasher.finish() & 0xFFFF);
+        temp_dir.join(format!("{base_name}_{hash_suffix}"))
     }
 }
 
