@@ -75,19 +75,20 @@ impl WebFetch {
         };
 
         // Build list of llms files to check (root + subpath if different)
-        let mut llms_files = vec![
-            ("llms.txt", format!("{base_url}/llms.txt"), temp_dir.join(format!("llms_{host}.txt"))),
-            ("llms-ctx.txt", format!("{base_url}/llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}.txt"))),
-            ("llms-ctx-full.txt", format!("{base_url}/llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}.txt"))),
+        // Format: (display_name, url, local_path, description)
+        let mut llms_files: Vec<(&str, String, PathBuf, &str)> = vec![
+            ("llms.txt", format!("{base_url}/llms.txt"), temp_dir.join(format!("llms_{host}.txt")), "LLM-friendly site index"),
+            ("llms-ctx.txt", format!("{base_url}/llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}.txt")), "LLM-ready docs, compact"),
+            ("llms-ctx-full.txt", format!("{base_url}/llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}.txt")), "LLM-ready docs, full"),
         ];
 
         // Add subpath llms files if not at root
         if parent_path != "/" {
             let subpath_id = parent_path.trim_matches('/').replace('/', "_");
             llms_files.extend([
-                ("llms.txt (subpath)", format!("{base_url}{parent_path}llms.txt"), temp_dir.join(format!("llms_{host}_{subpath_id}.txt"))),
-                ("llms-ctx.txt (subpath)", format!("{base_url}{parent_path}llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}_{subpath_id}.txt"))),
-                ("llms-ctx-full.txt (subpath)", format!("{base_url}{parent_path}llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}_{subpath_id}.txt"))),
+                ("llms.txt", format!("{base_url}{parent_path}llms.txt"), temp_dir.join(format!("llms_{host}_{subpath_id}.txt")), "LLM-friendly site index"),
+                ("llms-ctx.txt", format!("{base_url}{parent_path}llms-ctx.txt"), temp_dir.join(format!("llms-ctx_{host}_{subpath_id}.txt")), "LLM-ready docs, compact"),
+                ("llms-ctx-full.txt", format!("{base_url}{parent_path}llms-ctx-full.txt"), temp_dir.join(format!("llms-ctx-full_{host}_{subpath_id}.txt")), "LLM-ready docs, full"),
             ]);
         }
 
@@ -96,8 +97,8 @@ impl WebFetch {
             let size = metadata.map(|m| m.len()).unwrap_or(0);
             let llms_note: String = llms_files
                 .iter()
-                .filter(|(_, _, path)| path.exists())
-                .map(|(name, _, path)| format!("\n{name}: {}", path.display()))
+                .filter(|(_, _, path, _)| path.exists())
+                .map(|(_, _, path, desc)| format!("\n{} - {desc}", path.display()))
                 .collect();
             return Ok(CallToolResult::success(vec![Content::text(format!(
                 "Cached: {} ({} bytes){llms_note}",
@@ -107,7 +108,7 @@ impl WebFetch {
         }
 
         // Fetch main URL and all llms files in parallel
-        let llms_futures: Vec<_> = llms_files.iter().map(|(_, url, _)| reqwest::get(url)).collect();
+        let llms_futures: Vec<_> = llms_files.iter().map(|(_, url, _, _)| reqwest::get(url)).collect();
         let (main_result, llms_results) = tokio::join!(
             reqwest::get(url.clone()),
             futures::future::join_all(llms_futures),
@@ -157,9 +158,9 @@ impl WebFetch {
             if let Ok(resp) = result {
                 if resp.status().is_success() {
                     if let Ok(bytes) = resp.bytes().await {
-                        let (name, _, path) = &llms_files[i];
+                        let (_, _, path, desc) = &llms_files[i];
                         if tokio::fs::write(path, &bytes).await.is_ok() {
-                            llms_notes.push(format!("{name}: {} ({} bytes)", path.display(), bytes.len()));
+                            llms_notes.push(format!("{} ({} bytes) - {desc}", path.display(), bytes.len()));
                         }
                     }
                 }
