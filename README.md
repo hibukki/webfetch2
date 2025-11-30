@@ -13,7 +13,7 @@ A better web fetch tool that simply downloads the file and lets the caller (e.g 
 ### Claude Code Configuration
 
 ```sh
-cargo build --release && claude mcp add --transport stdio webfetch2 -- "$(pwd)/target/release/webfetch2"
+claude mcp remove webfetch2 ; cargo build --release && claude mcp add --transport stdio webfetch2 -- "$(pwd)/target/release/webfetch2"
 ```
 
 Then restart Claude Code.
