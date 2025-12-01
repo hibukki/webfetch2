@@ -7,13 +7,12 @@ A better web fetch tool, made with claude-code in mind.
 The built-in WebFetch tool has limitations::
 
 > Fetches content from a specified URL and processes it using an AI model
+
 > Results may be summarized if the content is very large
 
 And recommends using another tool if possible:
 
-> IMPORTANT: If an MCP-provided web fetch tool is available, prefer using
-> that tool instead of this one, as it may have fewer restrictions. All
-> MCP-provided tools start with "mcp\_\_".
+> IMPORTANT: If an MCP-provided web fetch tool is available, prefer using that tool instead of this one, as it may have fewer restrictions.
 
 The quotes are from the original tool's description (got them from asking claude-code, ask your own claude-code to verify!)
 
