@@ -1,8 +1,6 @@
 # WebFetch2 MCP Server
 
-A better web fetch tool that downloads files and lets the LLM use its native file reading tools.
-
-Also auto-discovers [llms.txt](https://llmstxt.org/) files on the domain.
+A better web fetch tool, made with claude-code in mind.
 
 ## Why?
 
@@ -21,7 +19,7 @@ The quotes are from the original tool's description (got them from asking claude
 
 ### Do one thing and do it well
 
-This tool only downloads the file (and handles things around the download, like caching and llms.txt files), it treats reading/summarizing the file as out of scope. Claude code is already great at handling local files and doesn't need our help there.
+This tool only downloads the file (and handles things around the download, like caching and [llms.txt](https://llmstxt.org/) files), it treats reading/summarizing the file as out of scope. Claude code is already great at handling local files and doesn't need our help there.
 
 ## Installation
 
