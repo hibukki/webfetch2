@@ -55,7 +55,7 @@ async fn test_fetch_creates_directory() {
     let webfetch = WebFetch::new();
     webfetch
         .fetch(Parameters(FetchRequest {
-            url: "https://httpbin.org/html".to_string(),
+            url: "https://example.com".to_string(),
             use_cache: false,
         }))
         .await
@@ -84,13 +84,15 @@ async fn test_http_404_error() {
     let webfetch = WebFetch::new();
     let result = webfetch
         .fetch(Parameters(FetchRequest {
-            url: "https://httpbin.org/status/404".to_string(),
+            // example.com reliably returns 404 for nonexistent paths (maintained by IANA)
+            url: "https://example.com/nonexistent-path-12345".to_string(),
             use_cache: false,
         }))
         .await;
 
     assert!(result.is_err());
-    assert!(result.unwrap_err().message.contains("404"));
+    let err_msg = result.unwrap_err().message;
+    assert!(err_msg.contains("404"), "Expected 404 error, got: {}", err_msg);
 }
 
 #[tokio::test]
@@ -100,7 +102,7 @@ async fn test_file_path_is_relative() {
     let webfetch = WebFetch::new();
     let result = webfetch
         .fetch(Parameters(FetchRequest {
-            url: "https://httpbin.org/html".to_string(),
+            url: "https://example.com".to_string(),
             use_cache: false,
         }))
         .await

@@ -233,7 +233,8 @@ fn test_fetch_http_error() {
         json!({
             "name": "fetch",
             "arguments": {
-                "url": "https://httpbin.org/status/404"
+                // example.com reliably returns 404 for nonexistent paths (maintained by IANA)
+                "url": "https://example.com/nonexistent-path-12345"
             }
         }),
     );
@@ -250,10 +251,10 @@ fn test_fetch_http_error() {
     let error = &response["error"];
     let message = error["message"].as_str().unwrap();
 
-    // Error message should mention HTTP error (status code may vary if httpbin.org is having issues)
+    // Error message should mention 404
     assert!(
-        message.contains("HTTP") || message.to_lowercase().contains("error"),
-        "Error message should mention HTTP error: {message}"
+        message.contains("404"),
+        "Error message should mention 404: {message}"
     );
 }
 
