@@ -19,6 +19,10 @@ And recommends using another tool if possible:
 
 The quotes are from the original tool's description (got them from asking claude-code, ask your own claude-code to verify!)
 
+### Do one thing and do it well
+
+This tool only downloads the file (and handles things around the download, like caching and llms.txt files), it treats reading/summarizing the file as out of scope. Claude code is already great at handling local files and doesn't need our help there.
+
 ## Installation
 
 Requires [Rust](https://rustup.rs/).
