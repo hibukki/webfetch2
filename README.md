@@ -6,12 +6,18 @@ Also auto-discovers [llms.txt](https://llmstxt.org/) files on the domain.
 
 ## Why?
 
-Claude Code's built-in WebFetch tool has limitations:
-- Uses Haiku to filter content by prompt, returning only a small subset
-- Can't re-read the page with different focus
-- May lose important context through summarization
+The built-in WebFetch tool has limitations::
 
-This tool simply downloads the full file. The LLM can then use its native file reading tools to read it multiple times with full context.
+> Fetches content from a specified URL and processes it using an AI model
+> Results may be summarized if the content is very large
+
+And recommends using another tool if possible:
+
+> IMPORTANT: If an MCP-provided web fetch tool is available, prefer using
+> that tool instead of this one, as it may have fewer restrictions. All
+> MCP-provided tools start with "mcp\_\_".
+
+The quotes are from the original tool's description (got them from asking claude-code, ask your own claude-code to verify!)
 
 ## Installation
 
